@@ -1,0 +1,41 @@
+workflows:
+  build-apk:
+    name: Build APK
+    max_build_duration: 120 # minutes, adjust if needed
+    environment:
+      vars:
+        ANDROID_HOME: $CM_BUILD_DIR/android-sdk
+      node: latest
+      python: 3.13
+      xcode: latest
+      cocoapods: latest
+      flutter: none
+      ruby: latest
+    scripts:
+      - name: Install system dependencies
+        script: |
+          sudo apt-get update
+          sudo apt-get install -y python3-pip python3-dev build-essential openjdk-17-jdk zip unzip wget git curl
+      - name: Upgrade pip and install Python dependencies
+        script: |
+          python3 -m pip install --upgrade pip
+          pip3 install buildozer kivy kivymd deep-translator pyotp cython
+      - name: Install Android SDK command-line tools
+        script: |
+          mkdir -p $ANDROID_HOME/cmdline-tools
+          cd $ANDROID_HOME/cmdline-tools
+          wget https://dl.google.com/android/repository/commandlinetools-linux-9123335_latest.zip -O cmdline-tools.zip
+          unzip cmdline-tools.zip
+          mv cmdline-tools latest
+          yes | sdkmanager --licenses
+          sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2"
+      - name: Build APK with Buildozer
+        script: |
+          cd $CM_BUILD_DIR/TimeCipherApp  # adjust if your app is repo root, use $CM_BUILD_DIR
+          buildozer android debug
+      - name: Upload APK artifact
+        script: |
+          cp $CM_BUILD_DIR/TimeCipherApp/bin/*.apk $CM_BUILD_DIR/artifacts/
+    publishing:
+      artifacts:
+        - $CM_BUILD_DIR/artifacts/*.apk
